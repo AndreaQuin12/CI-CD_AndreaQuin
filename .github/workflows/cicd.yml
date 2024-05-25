@@ -24,10 +24,10 @@ jobs:
           cache: 'npm'
 
       - name: Run the audit on production deps only
-        run: npm audit --omit=dev 
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev 
    
       - name: Check for vulnerabilities
-        run: npm audit --omit=dev --json > audit-report.json
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
       - name: Fail if vulnerabilities found
         run: |
           vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           config-file: .github/codeql/codeql.config.yml
 

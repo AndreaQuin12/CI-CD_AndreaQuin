@@ -24,8 +24,8 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm ci
-   
+        run: cd ${{ env.FRONTEND_PATH }} && npm install --package-lock-only
+
       - name: Run the audit on production deps only
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev 
    

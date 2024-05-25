@@ -1,0 +1,163 @@
+name: CI/CD Pipeline
+
+on: 
+  push: 
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  FRONTEND_PATH: frontend
+
+jobs: 
+  audit:
+    name: Audit Frontend Deps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'npm'
+
+      - name: Run the audit on production deps only
+        run: npm audit --omit=dev 
+      
+      - name: Check for vulnerabilities
+        run: npm audit --omit=dev --json > audit-report.json
+      - name: Fail if vulnerabilities found
+        run: |
+          vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
+          if [ "$vulnerabilities" ]; then
+            echo "Vulnerabilities found"
+            exit 1
+          fi
+
+  lint:
+    name: Ensure Code Style
+    runs-on: ubuntu-latest
+    needs: audit
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'npm'
+
+      - name: Install deps
+        run: cd ${{ env.FRONTEND_PATH }} && npm i
+
+      - name: Lint code
+        run: cd ${{ env.FRONTEND_PATH }} && npm run lint
+
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: audit
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'npm'
+
+      - name: Install deps
+        run: cd ${{ env.FRONTEND_PATH }} && npm i
+
+      - name: Run the unit tests
+        run: cd ${{ env.FRONTEND_PATH }} && npm run test-ci
+
+  static-analysis:
+    name: Run Static Code Analysis
+    runs-on: ubuntu-latest
+    needs: audit
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          config-file: .github/codeql/codeql.config.yml
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'npm'
+
+      - name: Install Deps
+        run: cd ${{ env.FRONTEND_PATH }} && npm i
+
+      - name: Build
+        run: cd ${{ env.FRONTEND_PATH }} && npm run build
+
+  build:
+    name: Build Frontend Artifact
+    runs-on: ubuntu-latest
+    needs: 
+      - lint
+      - test
+      - static-analysis
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm i
+      - name: Build artifact
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm run build
+      
+      - uses: actions/upload-pages-artifact@v1
+        with: 
+          path: ${{ env.FRONTEND_PATH }}/build
+
+  deploy:
+    name: Deploy Frontend Artifact
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    if: github.ref == 'refs/heads/olt'
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+
+  verify:
+    name: Verify Successful Deployment
+    runs-on: ubuntu-latest
+    needs:
+      - deploy
+    if: success()
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run Frontend Smoke Test
+        run: |
+          export TEST_URL=${{ needs.deploy.outputs.page_url }}
+          cd ${{ env.FRONTEND_PATH }}/e2e
+          npm i
+          npm run smoke

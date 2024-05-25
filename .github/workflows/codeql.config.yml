@@ -1,0 +1,7 @@
+name: "CodeQL config for JavaScript"
+disable-default-queries: false
+
+queries:
+  - uses: github/codeql/javascript-queries@main
+  - uses: github/codeql/security-extended@main
+  - uses: github/codeql/security-and-quality@main

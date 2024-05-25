@@ -16,9 +16,14 @@ jobs:
     name: Audit Frontend Deps
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Change directory to frontend
+        run: cd ${{ env.FRONTEND_PATH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: 'npm'
@@ -41,36 +46,46 @@ jobs:
     runs-on: ubuntu-latest
     needs: audit
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Change directory to frontend
+        run: cd ${{ env.FRONTEND_PATH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: npm install
 
       - name: Lint code
-        run: cd ${{ env.FRONTEND_PATH }} && npm run lint
+        run: npm run lint
 
   test:
     name: Run Unit Tests
     runs-on: ubuntu-latest
     needs: audit
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Change directory to frontend
+        run: cd ${{ env.FRONTEND_PATH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: npm install
 
       - name: Run the unit tests
-        run: cd ${{ env.FRONTEND_PATH }} && npm run test-ci
+        run: npm run test-ci
 
   static-analysis:
     name: Run Static Code Analysis
@@ -79,23 +94,28 @@ jobs:
     permissions:
       security-events: write
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Change directory to frontend
+        run: cd ${{ env.FRONTEND_PATH }}
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
           config-file: .github/codeql/codeql.config.yml
 
-      - uses: actions/setup-node@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: 'npm'
 
       - name: Install Deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: npm install
 
       - name: Build
-        run: cd ${{ env.FRONTEND_PATH }} && npm run build
+        run: npm run build
 
   build:
     name: Build Frontend Artifact
@@ -105,24 +125,28 @@ jobs:
       - test
       - static-analysis
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Change directory to frontend
+        run: cd ${{ env.FRONTEND_PATH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: 'npm'
       
       - name: Install Dependencies
-        run: |
-          cd ${{ env.FRONTEND_PATH }}
-          npm i
+        run: npm install
+
       - name: Build artifact
-        run: |
-          cd ${{ env.FRONTEND_PATH }}
-          npm run build
+        run: npm run build
       
-      - uses: actions/upload-pages-artifact@v1
-        with: 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: frontend-build
           path: ${{ env.FRONTEND_PATH }}/build
 
   deploy:
@@ -140,9 +164,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: frontend-build
+          path: ${{ env.FRONTEND_PATH }}/build
+
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          folder: ${{ env.FRONTEND_PATH }}/build
 
   verify:
     name: Verify Successful Deployment
@@ -152,12 +184,12 @@ jobs:
     if: success()
     permissions: write-all
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Run Frontend Smoke Test
         run: |
           export TEST_URL=${{ needs.deploy.outputs.page_url }}
           cd ${{ env.FRONTEND_PATH }}/e2e
-          npm i
+          npm install
           npm run smoke

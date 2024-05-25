@@ -27,21 +27,20 @@ jobs:
         run: cd ${{ env.FRONTEND_PATH }} && npm ci
 
       - name: Run the audit on production deps only
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev
+
+      - name: Check for vulnerabilities
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
 
       - name: List files for debugging
         run: |
           cd ${{ env.FRONTEND_PATH }}
           ls -la
-          cat audit-report.json || echo "audit-report.json does not exist"
-
-      - name: Check for vulnerabilities
-        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
+          cat audit-report.json
 
       - name: Fail if vulnerabilities found
         run: |
-          cd ${{ env.FRONTEND_PATH }}
-          vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
+          vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' ${{ env.FRONTEND_PATH }}/audit-report.json)
           if [ "$vulnerabilities" ]; then
             echo "Vulnerabilities found"
             exit 1

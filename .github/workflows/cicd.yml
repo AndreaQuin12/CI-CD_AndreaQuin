@@ -1,7 +1,7 @@
 name: CI/CD Pipeline
 
-on: 
-  push: 
+on:
+  push:
 
 permissions:
   contents: read
@@ -11,7 +11,7 @@ permissions:
 env:
   FRONTEND_PATH: frontend
 
-jobs: 
+jobs:
   audit:
     name: Audit Frontend Deps
     runs-on: ubuntu-latest
@@ -24,15 +24,23 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm install --package-lock-only
+        run: cd ${{ env.FRONTEND_PATH }} && npm ci
 
       - name: Run the audit on production deps only
-        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev 
-   
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
+
+      - name: List files for debugging
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          ls -la
+          cat audit-report.json || echo "audit-report.json does not exist"
+
       - name: Check for vulnerabilities
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
+
       - name: Fail if vulnerabilities found
         run: |
+          cd ${{ env.FRONTEND_PATH }}
           vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
           if [ "$vulnerabilities" ]; then
             echo "Vulnerabilities found"
@@ -103,7 +111,7 @@ jobs:
   build:
     name: Build Frontend Artifact
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - lint
       - test
       - static-analysis
@@ -114,18 +122,19 @@ jobs:
         with:
           node-version: 16.x
           cache: 'npm'
-   
+
       - name: Install Dependencies
         run: |
           cd ${{ env.FRONTEND_PATH }}
           npm ci
+
       - name: Build artifact
         run: |
           cd ${{ env.FRONTEND_PATH }}
           npm run build
-   
+
       - uses: actions/upload-pages-artifact@v1
-        with: 
+        with:
           path: ${{ env.FRONTEND_PATH }}/build
 
   deploy:
@@ -133,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-    if: github.ref == 'refs/heads/olt'
+    if: github.ref == 'refs/heads/main'
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     permissions:

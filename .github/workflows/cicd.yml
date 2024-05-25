@@ -23,6 +23,9 @@ jobs:
           node-version: 16.x
           cache: 'npm'
 
+      - name: Install deps
+        run: cd ${{ env.FRONTEND_PATH }} && npm ci
+   
       - name: Run the audit on production deps only
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev 
    
@@ -49,7 +52,7 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: cd ${{ env.FRONTEND_PATH }} && npm ci
 
       - name: Lint code
         run: cd ${{ env.FRONTEND_PATH }} && npm run lint
@@ -67,7 +70,7 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: cd ${{ env.FRONTEND_PATH }} && npm ci
 
       - name: Run the unit tests
         run: cd ${{ env.FRONTEND_PATH }} && npm run test-ci
@@ -92,7 +95,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm i
+        run: cd ${{ env.FRONTEND_PATH }} && npm ci
 
       - name: Build
         run: cd ${{ env.FRONTEND_PATH }} && npm run build
@@ -115,7 +118,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd ${{ env.FRONTEND_PATH }}
-          npm i
+          npm ci
       - name: Build artifact
         run: |
           cd ${{ env.FRONTEND_PATH }}
@@ -159,5 +162,5 @@ jobs:
         run: |
           export TEST_URL=${{ needs.deploy.outputs.page_url }}
           cd ${{ env.FRONTEND_PATH }}/e2e
-          npm i
+          npm ci
           npm run smoke

@@ -2,6 +2,8 @@ name: CI/CD Pipeline
 
 on:
   push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -23,24 +25,30 @@ jobs:
           node-version: 16.x
           cache: 'npm'
 
+      - name: Clean npm cache
+        run: npm cache clean --force
+
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm ci
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Run the audit on production deps only
-        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev
-
-      - name: Check for vulnerabilities
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
 
       - name: List files for debugging
         run: |
           cd ${{ env.FRONTEND_PATH }}
           ls -la
-          cat audit-report.json
+          cat audit-report.json || echo "audit-report.json does not exist"
+
+      - name: Check for vulnerabilities
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
 
       - name: Fail if vulnerabilities found
         run: |
-          vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' ${{ env.FRONTEND_PATH }}/audit-report.json)
+          cd ${{ env.FRONTEND_PATH }}
+          vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
           if [ "$vulnerabilities" ]; then
             echo "Vulnerabilities found"
             exit 1
@@ -59,7 +67,9 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm ci
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Lint code
         run: cd ${{ env.FRONTEND_PATH }} && npm run lint
@@ -77,7 +87,9 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm ci
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Run the unit tests
         run: cd ${{ env.FRONTEND_PATH }} && npm run test-ci
@@ -102,10 +114,14 @@ jobs:
           cache: 'npm'
 
       - name: Install Deps
-        run: cd ${{ env.FRONTEND_PATH }} && npm ci
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Build
-        run: cd ${{ env.FRONTEND_PATH }} && npm run build
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm run build
 
   build:
     name: Build Frontend Artifact
@@ -125,15 +141,16 @@ jobs:
       - name: Install Dependencies
         run: |
           cd ${{ env.FRONTEND_PATH }}
-          npm ci
+          npm install
 
       - name: Build artifact
         run: |
           cd ${{ env.FRONTEND_PATH }}
           npm run build
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-artifact@v2
         with:
+          name: frontend-artifact
           path: ${{ env.FRONTEND_PATH }}/build
 
   deploy:

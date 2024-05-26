@@ -25,6 +25,9 @@ jobs:
           node-version: 16.x
           cache: 'npm'
 
+      - name: Clean npm cache
+        run: npm cache clean --force
+
       - name: Install deps
         run: |
           cd ${{ env.FRONTEND_PATH }}
@@ -33,7 +36,16 @@ jobs:
       - name: Run the audit on production deps only
         run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
 
+      - name: List files for debugging
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          ls -la
+          cat audit-report.json || echo "audit-report.json does not exist"
+
       - name: Check for vulnerabilities
+        run: cd ${{ env.FRONTEND_PATH }} && npm audit --omit=dev --json > audit-report.json
+
+      - name: Fail if vulnerabilities found
         run: |
           cd ${{ env.FRONTEND_PATH }}
           vulnerabilities=$(jq '.metadata.vulnerabilities | select(.total > 0)' audit-report.json)
@@ -54,6 +66,11 @@ jobs:
           node-version: 16.x
           cache: 'npm'
 
+      - name: Install deps
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
+
       - name: Lint code
         run: cd ${{ env.FRONTEND_PATH }} && npm run lint
 
@@ -68,6 +85,11 @@ jobs:
         with:
           node-version: 16.x
           cache: 'npm'
+
+      - name: Install deps
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Run the unit tests
         run: cd ${{ env.FRONTEND_PATH }} && npm run test-ci
@@ -90,6 +112,11 @@ jobs:
         with:
           node-version: 16.x
           cache: 'npm'
+
+      - name: Install Deps
+        run: |
+          cd ${{ env.FRONTEND_PATH }}
+          npm install
 
       - name: Build
         run: |

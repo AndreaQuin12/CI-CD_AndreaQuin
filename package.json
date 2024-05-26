@@ -23,7 +23,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "test-ci": "react-scripts test --env=jsdom --watchAll=false",
-    "lint": "node_modules/.bin/eslint ./src"
+    "lint": "eslint ./src"
   },
   "browserslist": {
     "production": [

@@ -1,12 +1,3 @@
-name: "Example CodeQL config"
-queries:
-  - uses: github/codeql/javascript-queries
-paths:
-  - frontend/src
-Here is the complete workflow:
-
-yaml
-Copy code
 name: CI/CD Pipeline
 
 on:
@@ -17,7 +8,6 @@ on:
 permissions:
   contents: read
   pages: write
-  id-token: write
 
 env:
   FRONTEND_PATH: frontend
@@ -168,11 +158,8 @@ jobs:
   deploy:
     name: Deploy Frontend Artifact
     runs-on: ubuntu-latest
-    needs:
-      - build
+    needs: build
     if: github.ref == 'refs/heads/main'
-    outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       pages: write
       id-token: write
@@ -187,8 +174,7 @@ jobs:
   verify:
     name: Verify Successful Deployment
     runs-on: ubuntu-latest
-    needs:
-      - deploy
+    needs: deploy
     if: success()
     permissions: write-all
     steps:

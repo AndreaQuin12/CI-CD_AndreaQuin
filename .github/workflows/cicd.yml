@@ -1,3 +1,12 @@
+name: "Example CodeQL config"
+queries:
+  - uses: github/codeql/javascript-queries
+paths:
+  - frontend/src
+Here is the complete workflow:
+
+yaml
+Copy code
 name: CI/CD Pipeline
 
 on:
@@ -122,6 +131,9 @@ jobs:
         run: |
           cd ${{ env.FRONTEND_PATH }}
           npm run build
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
   build:
     name: Build Frontend Artifact
